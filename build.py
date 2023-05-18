@@ -5,13 +5,14 @@ from natsort import natsorted
 
 
 # The base name of our generated images
-PREFIX = 'adamrehn/ue4-runtime'
+PREFIX = 'al1y/ue4-runtime'
 
 # The list of supported Ubuntu LTS releases
-RELEASES = ['18.04', '20.04']
+# RELEASES = ['18.04', '20.04', '22.04']
+RELEASES = ['22.04']
 
 # The Ubuntu release that our alias tags point to
-ALIAS_RELEASE = '20.04'
+ALIAS_RELEASE = '22.04'
 
 
 # Prints and runs a command
@@ -77,15 +78,23 @@ for ubuntuRelease in RELEASES:
 	
 	# Retrieve the list of tags for the `nvidia/cudagl` base image for the current Ubuntu release
 	cudaSuffix = '-base-ubuntu{}'.format(ubuntuRelease)
-	cudaTags = natsorted([tag for tag in listTags('nvidia/cudagl') if tag.endswith(cudaSuffix)])
+
+	cudaTags =  [] 
+	# Can't find query endpoint for https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags
+	if ubuntuRelease == "22.04":
+		cudaTags = map (lambda t : f"{t}-base-ubuntu22.04", ["12.1.1", "12.1.0", "12.0.1", "12.0.0"])
+	else:
+		cudaTags = natsorted([tag for tag in listTags('nvidia/cudagl') if tag.endswith(cudaSuffix)])
 	
+	image = "nvcr.io/nvidia/cuda" if ubuntuRelease == "22.04" else "nvidia/cudagl"
+
 	# Generate our list of ue4-runtime image variants and corresponding base images
 	variants = {'vulkan': 'nvidia/opengl:1.2-glvnd-runtime-ubuntu{}'.format(ubuntuRelease)}
 	variantDescriptions = {'vulkan': ''}
 	for tag in cudaTags:
 		cudaVersion = tag.replace(cudaSuffix, '')
 		variant = 'cudagl{}'.format(cudaVersion)
-		variants[variant] = 'nvidia/cudagl:{}'.format(tag)
+		variants[variant] = '{}:{}'.format(image, tag)
 		variantDescriptions[variant] = ' + CUDA {}'.format(cudaVersion)
 	
 	# Build the base image for each variant (the "noaudio" version without PulseAudio)
@@ -165,7 +174,7 @@ if args.readme == True:
 	print()
 	
 	# Pretty-formats a tag
-	formatTag = lambda tag: '**{}**'.format(tag.replace('adamrehn/ue4-runtime:', ''))
+	formatTag = lambda tag: '**{}**'.format(tag.replace('al1y/ue4-runtime:', ''))
 	
 	# Print the descriptive details of our alias tags
 	print('## Alias tags\n')
